@@ -40,8 +40,9 @@ def analyze(pair, yf_symbol, tf, mode):
     df = yf.download(yf_symbol, period="1d", interval=tf)
     if df.empty or len(df) < 50:
         return None
-
-    close = df["Close"]
+        
+df = df.dropna()
+    close = df["Close"].squeeze()
 
     ema50 = EMAIndicator(close, 50).ema_indicator()
     ema200 = EMAIndicator(close, 200).ema_indicator()
