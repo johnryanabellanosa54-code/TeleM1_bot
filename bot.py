@@ -37,37 +37,56 @@ logging.basicConfig(level=logging.INFO)
 
 # ================= INDICATOR ENGINE =================
 def analyze(pair, yf_symbol, tf, mode):
-    df = yf.download(yf_symbol, period="1d", interval=tf)
-    if df.empty or len(df) < 50:
+    df = yf.download(
+        yf_symbol,
+        period="2d",
+        interval=tf,
+        auto_adjust=True,
+        progress=False
+    )
+
+    if df is None or df.empty or len(df) < 200:
         return None
-        
-df = df.dropna()
-    close = df["Close"].squeeze()
 
-    ema50 = EMAIndicator(close, 50).ema_indicator()
-    ema200 = EMAIndicator(close, 200).ema_indicator()
-    rsi = RSIIndicator(close, 14).rsi()
-    macd = MACD(close)
+    # Force clean 1D series
+    close = df["Close"].astype(float).values.flatten()
 
-    last = df.iloc[-1]
+    # ===== EMA CALC (PURE NUMPY / PANDAS) =====
+    ema50 = pd.Series(close).ewm(span=50, adjust=False).mean()
+    ema200 = pd.Series(close).ewm(span=200, adjust=False).mean()
 
-    # Trend
+    # ===== RSI CALC =====
+    delta = pd.Series(close).diff()
+    gain = delta.clip(lower=0).rolling(14).mean()
+    loss = -delta.clip(upper=0).rolling(14).mean()
+    rs = gain / loss
+    rsi = 100 - (100 / (1 + rs))
+
+    # ===== MACD CALC =====
+    ema12 = pd.Series(close).ewm(span=12, adjust=False).mean()
+    ema26 = pd.Series(close).ewm(span=26, adjust=False).mean()
+    macd = ema12 - ema26
+    signal = macd.ewm(span=9, adjust=False).mean()
+    hist = macd - signal
+
+    # Latest values
+    rsi_val = rsi.iloc[-1]
+    hist_val = hist.iloc[-1]
+
     bullish = ema50.iloc[-1] > ema200.iloc[-1]
     bearish = ema50.iloc[-1] < ema200.iloc[-1]
 
-    rsi_val = rsi.iloc[-1]
-    macd_hist = macd.macd_diff().iloc[-1]
-
+    # ===== SIGNAL LOGIC =====
     if mode == "AGGRESSIVE":
-        if bullish and 45 <= rsi_val <= 65 and macd_hist > 0:
+        if bullish and 45 <= rsi_val <= 65 and hist_val > 0:
             return "BUY"
-        if bearish and 35 <= rsi_val <= 55 and macd_hist < 0:
+        if bearish and 35 <= rsi_val <= 55 and hist_val < 0:
             return "SELL"
 
     if mode == "SAFE":
-        if bullish and 48 <= rsi_val <= 60 and macd_hist > 0:
+        if bullish and 48 <= rsi_val <= 60 and hist_val > 0:
             return "BUY"
-        if bearish and 40 <= rsi_val <= 52 and macd_hist < 0:
+        if bearish and 40 <= rsi_val <= 52 and hist_val < 0:
             return "SELL"
 
     return None
