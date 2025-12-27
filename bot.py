@@ -10,8 +10,8 @@ from datetime import datetime
 import pytz
 
 # ================= CONFIG =================
-TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"
-CHAT_ID = YOUR_CHAT_ID   # integer
+TOKEN = "TOKEN"
+CHAT_ID = CHAT_ID   # integer
 
 PAIRS = {
     "EURUSD": "EURUSD=X",
