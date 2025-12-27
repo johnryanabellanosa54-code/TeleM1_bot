@@ -10,8 +10,10 @@ from datetime import datetime
 import pytz
 
 # ================= CONFIG =================
-TOKEN = "TOKEN"
-CHAT_ID = CHAT_ID   # integer
+import os
+
+TOKEN = os.getenv("TOKEN")
+CHAT_ID = int(os.getenv("CHAT_ID"))
 
 PAIRS = {
     "EURUSD": "EURUSD=X",
